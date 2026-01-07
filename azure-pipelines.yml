@@ -1,0 +1,48 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  name: 'Default' # Itt marad a Default pool, ahol az ADAM nevű agented vár
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+# 1. Lépés: Megkeresi és visszaállítja a WPF projekt függőségeit
+- task: DotNetCoreCLI@2
+  displayName: 'GUI Kód visszaállítása'
+  inputs:
+    command: 'restore'
+    projects: '**/SzamologepGUI.csproj' # Figyelj, hogy a .csproj neve pontos legyen!
+
+# 2. Lépés: Lefordítja a grafikus alkalmazást
+- task: DotNetCoreCLI@2
+  displayName: 'GUI Build folyamat'
+  inputs:
+    command: 'build'
+    projects: '**/SzamologepGUI.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+# 3. Lépés: Összecsomagolja a futtatható fájlokat
+- task: DotNetCoreCLI@2
+  displayName: 'GUI Publish'
+  inputs:
+    command: 'publish'
+    publishWebProjects: false
+    projects: '**/SzamologepGUI.csproj'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    zipAfterPublish: false
+
+# 4. Lépés: Átmásolja a kész EXE-t egy KÜLÖN mappába a gépeden
+- task: CopyFiles@2
+  displayName: 'Deploy: Másolás a Grafikus mappába'
+  inputs:
+    SourceFolder: '$(Build.ArtifactStagingDirectory)'
+    Contents: '**'
+    TargetFolder: 'C:\Users\Adika\source\repos\SzamológépGUI' # Új mappa, hogy ne keveredjen a konzolossal
+    CleanTargetFolder: true
